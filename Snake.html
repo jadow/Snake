@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Javascript Snake</title>
+  <style>
+	#canvas   {box-shadow: 10px 10px 10px #999; border: 2px solid #333; }
+	
+
+  </style>
+</head>
+
+<body>
+	<canvas id="canvas" width="800" height="800" >
+	Your browser does not support the HTML5 canvas tag.
+	</canvas>
+  
+	<script>
+	
+	////////////////////////////////////////////////////
+	// Animation API
+	////////////////////////////////////////////////////
+	window.requestAnimFrame = (function(){
+		return  window.requestAnimationFrame       || 
+				window.webkitRequestAnimationFrame || 
+				window.mozRequestAnimationFrame    || 
+				window.oRequestAnimationFrame      || 
+				window.msRequestAnimationFrame     || 
+				function(/* function */ callback, /* DOMElement */ element){
+				window.setTimeout(callback, 1000 / 60);
+				};
+    })();
+	
+	////////////////////////////////////////////////////
+	// INIT 
+	////////////////////////////////////////////////////
+	var canvas = document.getElementById('canvas');
+	var ctx = canvas.getContext('2d');
+	var hy = canvas.height;
+	var hx = canvas.width;
+	var nx = 40; 
+	var ny = 40;
+	var height = hy / ny;
+	var width = hx / nx;
+
+	////////////////////////////////////////////////////
+	// GAME VARIABLES
+	////////////////////////////////////////////////////
+	var GAMESTATE = {STARTSCREEN: 0, GAMEON: 1, GAMEOVER: 2, GAMEPAUSE: 3};
+	var GAMESPEED = {STARTINGSPEED: 2000, SPEEDUP: 20, MAXSPEED: 200};
+	var GAMEEVENT  = {HITSNAKE :0, HITFOOD :1, HITNOTHING :2}
+	var locX, locY, gameState, score, speed;
+	var queue = [];
+	var map = new Array(ny); //[y][x]
+	
+	startScreen();
+	newGame();
+
+	////////////////////////////////////////////////////
+	// EXCEPTIONS 
+	////////////////////////////////////////////////////
+	var KEY  = { ESC: 27, SPACE: 32, LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40 , ENTER: 13, SHIFT: 16, DEL: 46, END: 35};
+	
+	function addExceptions() {
+		document.addEventListener('keydown', keydown, false);
+		window.addEventListener('resize', resize, false);
+	}
+	
+	function keydown(event) {
+		console.log(gameState);
+		if(gameState == GAMESTATE.GAMEON) {
+			if(event.keyCode == KEY.LEFT ) {
+				locX--;
+			}
+			else if(event.keyCode == KEY.RIGHT ) {
+				locX++;
+			}
+			else if(event.keyCode == KEY.UP ) {
+				locY++;
+			}
+			else if(event.keyCode == KEY.DOWN ) {
+				locY--;
+			}
+			checkMove();
+		}
+		
+		if(event.keyCode == KEY.DEL ) {
+		
+		}	
+	}
+	
+	function resize(event){
+		//not much to do here
+	}
+			
+	////////////////////////////////////////////////////
+	// GAME ACTIONS 
+	////////////////////////////////////////////////////	
+	function moveSnake(row, column){
+		var gameEvent = addBlock(map, row, column, 'red');
+		if(gameEvent == GAMEEVENT.HITFOOD) {		
+			queue.push({x: column, y: row});
+			console.log("yes");
+		}
+		else if(gameEvent == GAMEEVENT.HITNOTHING) {
+			queue.push({x: column, y: row});
+			var lastPiece = queue.shift();
+			removeBlock(map, lastPiece.y, lastPiece.x );
+		}
+		else if(gameEvent == GAMEEVENT.HITSNAKE) {
+			gameOver();
+		}
+	}
+	
+	function checkMove() {
+		if(locX >= nx) {
+			locX = 0;
+		}
+		else if(locX < 0) {
+			locX = nx -1;
+		}
+		
+		if(locY >= ny) {
+			locY = 0;
+		}
+		else if (locY < 0) {
+			locY = ny -1;
+		}
+		
+		if(queue[queue.length-2].x == locX && queue[queue.length-2].y == locY) {
+			locX = queue[queue.length-1].x;
+			locY = queue[queue.length-1].y;
+			return;
+		}	
+		else {
+			moveSnake(locY, locX);
+		}		
+	}
+	
+	////////////////////////////////////////////////////
+	// MAPPING 
+	////////////////////////////////////////////////////	
+	function clearMap(map, ny, nx) {
+		clearLine(map,ny ,0, ny);
+	}
+	
+	function clearLine(map,ny ,y, n) {
+		for(var line = y; line < ny; line++) {
+			if(line + n < ny) {
+				map[line] = map[line+n];
+			}
+			else {
+				initRow(map ,line , nx);
+			}
+		}
+	}
+	
+	function initMap(map, ny, nx) {
+		for(var row=0; row < ny ; row++) {
+			initRow(map ,row , nx);
+		}
+	}
+	
+	function initRow(map ,row , nx) {
+		map[row] = new Array(nx);
+		for(var column =0; column < nx; column++) {
+			map[row][column] = {occupied : false, colour : 'white'};
+		}
+	}
+	
+	function addBlock(map, row, column, colour) {
+		if(!map[row][column].occupied) {
+			map[row][column].occupied = true;
+			map[row][column].colour = colour;
+			return GAMEEVENT.HITNOTHING;
+		}
+	
+		else if(map[row][column].colour != colour) {
+			map[row][column].colour = colour;
+			return GAMEEVENT.HITFOOD;
+		}
+		else if(map[row][column].colour == colour) {
+			return GAMEEVENT.HITSNAKE;
+		}
+	}
+	
+	function removeBlock(map, row, column) {
+		map[row][column].occupied = false;
+		map[row][column].colour = 'white';
+	}
+	
+	////////////////////////////////////////////////////
+	// DISPLAY 
+	////////////////////////////////////////////////////	
+	function startScreen() {	
+		initMap(map, ny, nx);
+		addExceptions();
+		animate();
+		gameState = GAMESTATE.STARTSCREEN;
+	}
+	
+	function newGame() {
+		for(var i=nx/2 - 7; i < nx/2 ; i++) {
+			addBlock(map, ny/2, i, 'red');
+			queue.push({x: i, y: ny/2});
+			locX = i;
+			locY = ny/2;
+		}
+		
+		addBlock(map, 20, 25, 'black');
+		gameState = GAMESTATE.GAMEON;
+	}
+	
+	function gameOver() {
+		gameState = GAMESTATE.GAMEOVER;
+	}
+	
+	function gamePause() {
+		gameState = GAMESTATE.GAMEPAUSE;
+	}
+
+	function animate() {
+		requestAnimFrame( animate );
+		drawMap(ctx, nx, ny, map);
+	}
+		
+	function drawMap(ctx, nx, ny, map) {
+		ctx.clearRect(0, 0, hx, hy);
+		for(var row =0; row < ny; row++) {
+			for(var column =0; column < nx; column++) {
+				if(map[row][column].occupied) {
+					drawBox(ctx, row, column, map[row][column].colour);
+				}
+			}
+		}
+	}
+
+	// (0,0) is top left.
+	// i would prefer it to be bottom left
+	//hence ny-1-y instead of y
+	function drawBox (ctx, y, x, colour) {
+		ctx.fillStyle = colour;
+		ctx.fillRect(x*width, (ny-1-y)*height, width, height );
+		ctx.strokeRect(x*width, (ny-1-y)*height, width, height );
+	}
+	
+	function drawText(ctx, y, x, text, align, font, colour) {
+		ctx.textAlign = align;
+		ctx.font = font;
+		ctx.fillStyle = colour;
+		ctx.fillText(text, x, hy - y);
+		ctx.strokeText(text, x, hy - y);
+	}
+	
+	</script>
+  
+</body>
+</html>
