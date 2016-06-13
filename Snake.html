@@ -48,12 +48,12 @@
 	var GAMESTATE = {STARTSCREEN: 0, GAMEON: 1, GAMEOVER: 2, GAMEPAUSE: 3};
 	var GAMESPEED = {STARTINGSPEED: 2000, SPEEDUP: 20, MAXSPEED: 200};
 	var GAMEEVENT  = {HITSNAKE :0, HITFOOD :1, HITNOTHING :2}
-	var locX, locY, gameState, score, speed;
+	var GAMEMOVE ={LEFT :0, RIGHT :1, UP :2, DOWN :3}
+	var locX, locY, gameState, score, speed, nextMove;
 	var queue = [];
 	var map = new Array(ny); //[y][x]
 	
 	startScreen();
-	newGame();
 
 	////////////////////////////////////////////////////
 	// EXCEPTIONS 
@@ -66,25 +66,31 @@
 	}
 	
 	function keydown(event) {
-		console.log(gameState);
 		if(gameState == GAMESTATE.GAMEON) {
 			if(event.keyCode == KEY.LEFT ) {
-				locX--;
+				nextMove = GAMEMOVE.LEFT;
 			}
 			else if(event.keyCode == KEY.RIGHT ) {
-				locX++;
+				nextMove = GAMEMOVE.RIGHT;
 			}
 			else if(event.keyCode == KEY.UP ) {
-				locY++;
+				nextMove = GAMEMOVE.UP;
 			}
 			else if(event.keyCode == KEY.DOWN ) {
-				locY--;
+				nextMove = GAMEMOVE.DOWN;
 			}
-			checkMove();
+			else if(event.keyCode == KEY.END) {
+				checkPause();
+			}
+		}
+		else if(gameState == GAMESTATE.GAMEPAUSE) {
+			if(event.keyCode == KEY.END) {
+				checkPause();
+			}
 		}
 		
 		if(event.keyCode == KEY.DEL ) {
-		
+			newGame();
 		}	
 	}
 	
@@ -99,7 +105,7 @@
 		var gameEvent = addBlock(map, row, column, 'red');
 		if(gameEvent == GAMEEVENT.HITFOOD) {		
 			queue.push({x: column, y: row});
-			console.log("yes");
+			addFood();
 		}
 		else if(gameEvent == GAMEEVENT.HITNOTHING) {
 			queue.push({x: column, y: row});
@@ -136,14 +142,70 @@
 		}		
 	}
 	
+	function addFood() {
+		var findingX, findingY;
+		do {
+			findingX = Math.floor(Math.random() * nx);
+			findingY = Math.floor(Math.random() * ny);
+		} while(map[findingY][findingX].Occupied);
+		addBlock(map, findingY, findingX, 'black');
+	}
+	
+	function checkPause() {
+		gameState === GAMESTATE.GAMEPAUSE ? gameState = GAMESTATE.GAMEON : gameState = GAMESTATE.GAMEPAUSE;
+	}
+	
+	/*
+	function timer() {
+	
+			window.setTimeout(function(){ timer() }, speed);
+		}
+	}
+	*/
+	
+	
+	////////////////////////////////////////////////////
+	// GAME STATES 
+	////////////////////////////////////////////////////	
+	
+		function startScreen() {	
+		initMap(map, ny, nx);
+		addExceptions();
+		animate();
+		gameState = GAMESTATE.STARTSCREEN;
+	}
+	
+	function newGame() {
+		queue = [];
+		clearMap(map, ny, nx);
+		
+		for(var i=nx/2 - 7; i < nx/2 ; i++) {
+			addBlock(map, ny/2, i, 'red');
+			queue.push({x: i, y: ny/2});
+			locX = i;
+			locY = ny/2;
+		}
+		nextMove = GAMEMOVE.RIGHT;
+		addFood();
+		gameState = GAMESTATE.GAMEON;
+	}
+	
+	function gameOver() {
+		gameState = GAMESTATE.GAMEOVER;
+	}
+	
+	function gamePause() {
+		gameState = GAMESTATE.GAMEPAUSE;
+	}
+	
 	////////////////////////////////////////////////////
 	// MAPPING 
 	////////////////////////////////////////////////////	
 	function clearMap(map, ny, nx) {
-		clearLine(map,ny ,0, ny);
+		clearLine(map ,ny ,nx ,0 , ny);
 	}
 	
-	function clearLine(map,ny ,y, n) {
+	function clearLine(map,ny ,nx ,y, n) {
 		for(var line = y; line < ny; line++) {
 			if(line + n < ny) {
 				map[line] = map[line+n];
@@ -191,36 +253,10 @@
 	////////////////////////////////////////////////////
 	// DISPLAY 
 	////////////////////////////////////////////////////	
-	function startScreen() {	
-		initMap(map, ny, nx);
-		addExceptions();
-		animate();
-		gameState = GAMESTATE.STARTSCREEN;
-	}
-	
-	function newGame() {
-		for(var i=nx/2 - 7; i < nx/2 ; i++) {
-			addBlock(map, ny/2, i, 'red');
-			queue.push({x: i, y: ny/2});
-			locX = i;
-			locY = ny/2;
-		}
-		
-		addBlock(map, 20, 25, 'black');
-		gameState = GAMESTATE.GAMEON;
-	}
-	
-	function gameOver() {
-		gameState = GAMESTATE.GAMEOVER;
-	}
-	
-	function gamePause() {
-		gameState = GAMESTATE.GAMEPAUSE;
-	}
-
 	function animate() {
 		requestAnimFrame( animate );
-		drawMap(ctx, nx, ny, map);
+		drawMap(ctx, ny, nx, map);
+		drawMessage(ctx, hy, hx);
 	}
 		
 	function drawMap(ctx, nx, ny, map) {
@@ -233,6 +269,19 @@
 			}
 		}
 	}
+	
+	function drawMessage(ctx, hx, hy) {
+		
+		if(gameState == GAMESTATE.GAMEPAUSE) {
+			drawText(ctx, hy/2, hx/2, "Pause", "bold 90px Arial", 'cyan');
+		}
+		else if(gameState == GAMESTATE.GAMEOVER) {
+			drawText(ctx, hy/2, hx/2, "GAME OVER", "bold 90px Arial", 'cyan');
+		}
+		else if(gameState == GAMESTATE.STARTSCREEN) {
+			drawText(ctx, hy/2, hx/2, "Snake", "bold 90px Arial", 'cyan');
+		}
+	}
 
 	// (0,0) is top left.
 	// i would prefer it to be bottom left
@@ -243,8 +292,8 @@
 		ctx.strokeRect(x*width, (ny-1-y)*height, width, height );
 	}
 	
-	function drawText(ctx, y, x, text, align, font, colour) {
-		ctx.textAlign = align;
+	function drawText(ctx, y, x, text, font, colour) {
+		ctx.textAlign = "center";
 		ctx.font = font;
 		ctx.fillStyle = colour;
 		ctx.fillText(text, x, hy - y);
