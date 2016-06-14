@@ -46,7 +46,7 @@
 	// GAME VARIABLES
 	////////////////////////////////////////////////////
 	var GAMESTATE = {STARTSCREEN: 0, GAMEON: 1, GAMEOVER: 2, GAMEPAUSE: 3};
-	var GAMESPEED = {STARTINGSPEED: 2000, SPEEDUP: 20, MAXSPEED: 200};
+	var GAMESPEED = {STARTINGSPEED: 1000, SPEEDUP: 50, MAXSPEED: 100};
 	var GAMEEVENT  = {HITSNAKE :0, HITFOOD :1, HITNOTHING :2}
 	var GAMEMOVE ={LEFT :0, RIGHT :1, UP :2, DOWN :3}
 	var locX, locY, gameState, score, speed, nextMove;
@@ -101,20 +101,24 @@
 	////////////////////////////////////////////////////
 	// GAME ACTIONS 
 	////////////////////////////////////////////////////	
-	function moveSnake(row, column){
-		var gameEvent = addBlock(map, row, column, 'red');
-		if(gameEvent == GAMEEVENT.HITFOOD) {		
-			queue.push({x: column, y: row});
-			addFood();
+	function timer() {
+	
+		if (gameState == GAMESTATE.GAMEON){
+			if(nextMove == GAMEMOVE.LEFT) {
+				locX--;
+			} 
+			else if(nextMove == GAMEMOVE.RIGHT) {
+				locX++;
+			} 
+			else if(nextMove == GAMEMOVE.UP) {
+				locY++;
+			} 
+			else if(nextMove == GAMEMOVE.DOWN) {
+				locY--;
+			}
+			checkMove();
 		}
-		else if(gameEvent == GAMEEVENT.HITNOTHING) {
-			queue.push({x: column, y: row});
-			var lastPiece = queue.shift();
-			removeBlock(map, lastPiece.y, lastPiece.x );
-		}
-		else if(gameEvent == GAMEEVENT.HITSNAKE) {
-			gameOver();
-		}
+		window.setTimeout(function(){ timer() }, speed);	
 	}
 	
 	function checkMove() {
@@ -142,6 +146,22 @@
 		}		
 	}
 	
+	function moveSnake(row, column){
+		var gameEvent = addBlock(map, row, column, 'red');
+		if(gameEvent == GAMEEVENT.HITFOOD) {		
+			queue.push({x: column, y: row});
+			addFood();
+		}
+		else if(gameEvent == GAMEEVENT.HITNOTHING) {
+			queue.push({x: column, y: row});
+			var lastPiece = queue.shift();
+			removeBlock(map, lastPiece.y, lastPiece.x );
+		}
+		else if(gameEvent == GAMEEVENT.HITSNAKE) {
+			gameOver();
+		}
+	}
+		
 	function addFood() {
 		var findingX, findingY;
 		do {
@@ -149,21 +169,24 @@
 			findingY = Math.floor(Math.random() * ny);
 		} while(map[findingY][findingX].Occupied);
 		addBlock(map, findingY, findingX, 'black');
+		
+		speedUP();
 	}
 	
 	function checkPause() {
 		gameState === GAMESTATE.GAMEPAUSE ? gameState = GAMESTATE.GAMEON : gameState = GAMESTATE.GAMEPAUSE;
 	}
 	
-	/*
-	function timer() {
-	
-			window.setTimeout(function(){ timer() }, speed);
+	function speedUP() {
+		if(speed > GAMESPEED.MAXSPEED) {
+			speed -= GAMESPEED.SPEEDUP;
 		}
+		else {
+			speed = GAMESPEED.MAXSPEED;
+		}
+	
 	}
-	*/
-	
-	
+		
 	////////////////////////////////////////////////////
 	// GAME STATES 
 	////////////////////////////////////////////////////	
@@ -172,6 +195,8 @@
 		initMap(map, ny, nx);
 		addExceptions();
 		animate();
+		speed = GAMESPEED.STARTINGSPEED;
+		timer();
 		gameState = GAMESTATE.STARTSCREEN;
 	}
 	
@@ -241,6 +266,7 @@
 			return GAMEEVENT.HITFOOD;
 		}
 		else if(map[row][column].colour == colour) {
+			console.log(row, column, colour,"hit snake");
 			return GAMEEVENT.HITSNAKE;
 		}
 	}
