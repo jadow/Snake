@@ -56,7 +56,7 @@
 	var GAMEMOVE ={LEFT :0, RIGHT :1, UP :2, DOWN :3}
 	var GAMESPEED = {STARTINGSPEED: 250, SPEEDUP: 25, MAXSPEED: 100};
 	
-	var locX, locY, gameState, score, speed, nextMove;
+	var locX, locY, gameState, score, speed, nextMove, gameEvent;
 	var queue = [];
 	var map = new Array(ny); //[y][x]
 	
@@ -144,7 +144,6 @@
 	}
 	
 	function moveSnake(row, column){
-		var gameEvent = addBlock(map, row, column, 'red');
 		if(gameEvent == GAMEEVENT.HITFOOD) {		
 			queue.push({x: column, y: row});
 			addFood();
@@ -154,7 +153,9 @@
 			var lastPiece = queue.shift();
 			removeBlock(map, lastPiece.y, lastPiece.x );
 		}
-		else if(gameEvent == GAMEEVENT.HITSNAKE) {
+		
+		gameEvent = addBlock(map, row, column, 'red');
+		if(gameEvent == GAMEEVENT.HITSNAKE) {
 			gameOver();
 		}
 	}
@@ -182,13 +183,13 @@
 		addExceptions();
 		animate();
 		timer();
-		speed = GAMESPEED.STARTINGSPEED;
 		gameState = GAMESTATE.STARTSCREEN;
 	}
 	
 	function newGame() {
 		queue = [];
 		clearMap(map, ny, nx);
+		speed = GAMESPEED.STARTINGSPEED;
 		
 		for(var i=nx/4; i < nx/2 ; i++) {
 			addBlock(map, ny/2, i, 'red');
@@ -245,7 +246,6 @@
 			return GAMEEVENT.HITFOOD;
 		}
 		else if(map[row][column].colour == colour) {
-			console.log(row, column, colour,"hit snake");
 			return GAMEEVENT.HITSNAKE;
 		}
 	}
